@@ -1,0 +1,51 @@
+https://api.xmltime.com/astronomy?accesskey=9XadS6gzYp&expires=2014-07-07T11%3A32%3A06%2B00%3A00&signature=5jnUfMGYweqW9tQRkMDfR7hHjdU%3D&out=js&prettyprint=1&object=sun&placeid=australia%2Flord-howe-island&startdt=2014-07-07&enddt=2014-07-08
+
+{
+  "version": 1,
+  "locations": [{
+    "id": "750",
+    "geo": {
+      "name": "Lord Howe Island",
+      "state": "Lord Howe Island",
+      "country": {
+        "id": "au",
+        "name": "Australia"
+      },
+      "latitude": -31.557,
+      "longitude": 159.086
+    },
+    "astronomy": {
+      "objects": [{
+        "name": "sun",
+        "days": [{
+          "date": "2014-07-07",
+          "events": [{
+            "type": "rise",
+            "hour": 6,
+            "min": 53,
+            "azimuth": 63.7
+          },{
+            "type": "set",
+            "hour": 17,
+            "min": 4,
+            "azimuth": 296.2
+          }]
+        },{
+          "date": "2014-07-08",
+          "events": [{
+            "type": "rise",
+            "hour": 6,
+            "min": 53,
+            "azimuth": 63.9
+          },{
+            "type": "set",
+            "hour": 17,
+            "min": 4,
+            "azimuth": 296.1
+          }]
+        }]
+      }]
+    }
+  }]
+}
+
