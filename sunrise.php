@@ -300,73 +300,105 @@ function longdegtolongdir($long_deg)
 	return $longdir;
 }
 
-function get_sun_times($lat_deg, $long_deg, $time)
+function get_sun_times($lat_deg, $long_deg, $time, $angle = false)
 {
+	global $verbose;
 
-echo "Calculating for ".latdegtolatdir($lat_deg).", ".longdegtolongdir($long_deg)." at ".date("c", $time)."\n";
+	if($verbose) echo "Calculating for ".latdegtolatdir($lat_deg).", ".longdegtolongdir($long_deg)." at ".date("c", $time)."\n";
 
-$julian = unixtimeToJulianDate($time);
-echo "Julian date is $julian\n";
+	$julian = unixtimeToJulianDate($time);
+	if($verbose) echo "Julian date is $julian\n";
 
-$cycle = getJulianCycle($julian, $long_deg);
-echo "Julian cycle at {$long_deg}° is $cycle\n";
+	$cycle = getJulianCycle($julian, $long_deg);
+	if($verbose) echo "Julian cycle at {$long_deg}° is $cycle\n";
 
-$anomoly = getSolarMeanAnomaly($julian);
-echo "Mean Anomaly is {$anomoly}°\n";
+	$anomoly = getSolarMeanAnomaly($julian);
+	if($verbose) echo "Mean Anomaly is {$anomoly}°\n";
 
-$center = getEquationOfCenter($anomoly);
-echo "Equation of center is {$center}°\n";
+	$center = getEquationOfCenter($anomoly);
+	if($verbose) echo "Equation of center is {$center}°\n";
 
-$anomoly = $anomoly + $center;
-echo "True anomaly = {$anomoly}°\n";
+	$anomoly = $anomoly + $center;
+	if($verbose) echo "True anomaly = {$anomoly}°\n";
 
-$elong = getEclipticLongitude($anomoly);
-echo "The Ecliptic longitude is {$elong}°\n";
+	$elong = getEclipticLongitude($anomoly);
+	if($verbose) echo "The Ecliptic longitude is {$elong}°\n";
 
-$sun_long = getSunDeclination($elong);
-echo "The sun longitude is {$sun_long}°\n";
+	$sun_long = getSunDeclination($elong);
+	if($verbose) echo "The sun longitude is {$sun_long}°\n";
 
-$sun_ascension = getRightAscension($elong);
-echo "The sun right ascension is {$sun_ascension}°\n";
+	$sun_ascension = getRightAscension($elong);
+	if($verbose) echo "The sun right ascension is {$sun_ascension}°\n";
 
-$sidereal = getSiderealTime($julian, $long_deg);
-echo "The Sidereal Time is {$sidereal}°\n";
+	$sidereal = getSiderealTime($julian, $long_deg);
+	if($verbose) echo "The Sidereal Time is {$sidereal}°\n";
 
-$hourangle = getHourAngle1($sidereal, $sun_ascension);
+	$hourangle = getHourAngle1($sidereal, $sun_ascension);
 
-$azimuth = getAzimuth($hourangle, $lat_deg, $sun_long);
-echo "The sun azimuth is {$azimuth}°\n";
+	$azimuth = getAzimuth($hourangle, $lat_deg, $sun_long);
+	if($verbose) echo "The sun azimuth is {$azimuth}°\n";
 
-$altitude = getAltitude($hourangle, $lat_deg, $sun_long);
-echo "The sun altitude is {$altitude}°\n";
+	$altitude = getAltitude($hourangle, $lat_deg, $sun_long);
+	if($verbose) echo "The sun altitude is {$altitude}°\n";
 
-$transit = getApproxSolarTransit($long_deg, $cycle);
-echo "The solar transit is about {$transit}\n";
+	$transit = getApproxSolarTransit($long_deg, $cycle);
+	if($verbose) echo "The solar transit is about {$transit}\n";
 
-$transit = getSolarTransit($transit, $anomoly, $elong );
-echo "The transit is at {$transit}\n";
+	$transit = getSolarTransit($transit, $anomoly, $elong );
+	if($verbose) echo "The transit is at {$transit}\n";
 
-// The transit is 'solar noon' on that solar cycle
-//date_default_timezone_set("Australia/Melbourne");
+	// The transit is 'solar noon' on that solar cycle
 
-echo date("c", julianDateToUnixtime($transit))."\n";
+	if($verbose) echo date("c", julianDateToUnixtime($transit))."\n";
 
-global $h0;
-$h = getHourAngle2($h0, $lat_deg, $sun_long);
-echo "h = $h\n";
+	global $h0, $h1, $h2, $h3;
 
-// cheat method
-$sunset = $transit + $h / 360;
-$sunrise = $transit - $h / 360;
-echo "Sunrise is at ".date("c", julianDateToUnixtime($sunrise))."\n";
-echo "Sunset is at ".date("c", julianDateToUnixtime($sunset))."\n";
+	$angles = array('sun' => $h0,
+	                'twilight' => $h1,
+	                'nautical' => $h2,
+			'astronomical' => $h3);
 
-$r = array('sunrise' => julianDateToUnixtime($sunrise),
-           'sunset'  => julianDateToUnixtime($sunset)
-          );
+	$r = array();
+	foreach($angles as $name => $angle)
+	{
+		if($verbose) echo "Using $name angle $angle\n";
+		$h = getHourAngle2($angle, $lat_deg, $sun_long);
+		if($verbose) echo "h = $h\n";
 
-return $r;
+		// cheat method
+		$sunset = $transit + $h / 360;
+		$sunrise = $transit - $h / 360;
+		if($verbose) echo "$name rise is at ".date("c", julianDateToUnixtime($sunrise))."\n";
+		if($verbose) echo "$name set is at ".date("c", julianDateToUnixtime($sunset))."\n";
+	
+		$r["{$name}rise"] = julianDateToUnixtime($sunrise);
+		$r["{$name}set"]  = julianDateToUnixtime($sunset);
+	}
+
+	return $r;
 }
+
+function format_time($seconds)
+{
+	if($seconds < 0)
+	{
+		return "Unknown";
+	}
+	$H = floor($seconds / 3600);
+	$i = ($seconds / 60) % 60;
+	$s = $seconds % 60;
+	return sprintf("%02d:%02d:%02d", $H, $i, $s);
+}
+
+/**
+ * Inputs:
+ *  Time zone
+ *  Query time
+ *  Latitude & Longitude
+ *  Output format
+ *  Twilight
+ *  Verbose/debug calculations
+ */
 
 date_default_timezone_set("Etc/UTC");
 date_default_timezone_set("Australia/Melbourne");
@@ -387,22 +419,111 @@ $long_deg = -5;
 $time = mktime(12, 0, 0, 4, 1, 2004);*/
 //$time = time();
 
+$verbose = false;
 
 $time = time();
 //$time = mktime(1, 0, 0, 9, 23, 2014);
 $times = get_sun_times($lat_deg, $long_deg, $time);
-print_r($times);
-echo "$time\n";
+//print_r($times);
+//echo "$time\n";
+
+$state = "unknown";
+$time_from = -1;
+$time_till = -1;
+$twilight = false;
+
 if($time < $times['sunrise'])
 {
-	echo "Night (morning)\n";
+	$state = "Night";
+	$time_till = $times['sunrise'] - $time;
+	// time_from requires looking up yesterdays sunset time
+	$yesterday = get_sun_times($lat_deg, $long_deg, $time - $UNIX_daylen);
+	$time_from = $time - $yesterday['sunset'];
 }
 else if($time < $times['sunset'])
 {
-	echo "Day\n";
+	$state = "Day";
+	$time_from = $time - $times['sunrise'];
+	$time_till = $times['sunset'] - $time;
+
 }
 else
 {
-	echo "Night\n";
+	$state = "Night";
+	$time_from = $time - $times['sunset'];
+	// we need to check tomorrow's sunrise
+	$tomorrow = get_sun_times($lat_deg, $long_deg, $time + $UNIX_daylen);
+	$time_till = $tomorrow['sunrise'] - $time;
+
+	// twilight calculations
+	if($time < $times['twilightset'])
+	{
+		$twilight = "Civil";
+	}
+	else if($time < $times['nauticalset'])
+	{
+		$twilight = "Nautical";
+	}
+	else if($time < $times['astronomicalset'])
+	{
+		$twilight = "Astronomical";
+	}
 }
+
+if($state == "Day")
+{
+	$prev_event = "Sunrise";
+	$next_event = "Sunset";
+}
+else
+{
+	$prev_event = "Sunset";
+	$next_event = "Sunrise";
+}
+
+$output_format = "human";
+//$output_format = "computer";
+if($output_format == "computer")
+{
+	echo "state=".strtolower($state)."\n";
+	echo strtolower($prev_event)."=$time_from\n";
+	echo strtolower($next_event)."=$time_till\n";
+}
+else
+{
+	echo "State:      \t$state\n";
+	if($twilight)
+	{
+		echo "Twilight:\t$twilight\n";
+	}
+	echo "$prev_event was:\t".format_time($time_from)." ago\n";
+	echo "$next_event is in: \t".format_time($time_till)."\n";
+}
+
+print_r($times);
+
+/**
+ * Use cases:
+ * Turn off lights during the day
+ * * day/night indicator
+ *
+ * turn lights on at dusk
+ * * time till sunset (is there an angle for dusk?)
+ *
+ * turn on lights before dawn
+ * * time till sunrise
+ *
+ *
+ * Input parameters
+ * * latitude
+ * * longitude
+ * * time zone
+ * * query time
+ *
+ * Select output strings
+ * * day/night flag
+ * * time till sunrise/sunset
+ * * time from last sunrise/sunset
+ * * unit for times (human or seconds)
+ */
 ?>
